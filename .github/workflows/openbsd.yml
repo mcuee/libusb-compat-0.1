@@ -25,7 +25,7 @@ jobs:
           whoami
           pwd
           # http://ftp.openbsd.org/pub/OpenBSD/7.1/packages/amd64/
-          sudo pkg_add gcc-11.2.0p2 automake-1.16.3 autoconf-2.71 autoconf-archive libtool pkgconf
+          sudo pkg_add gcc-11.2.0p2 automake-1.16.3 autoconf-2.71 autoconf-archive libtool pkgconf libusb1
           export AUTOCONF_VERSION=2.71
           export AUTOMAKE_VERSION=1.16
           ./autogen.sh --enable-examples-build && make -j4

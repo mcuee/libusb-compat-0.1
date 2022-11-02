@@ -1,0 +1,32 @@
+name: "OpenBSD build"
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on: [push, pull_request]
+# A workflow run is made up of one or more jobs that can run
+# sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Repository checkout
+      uses: actions/checkout@v2
+
+    - name: Test on OpenBSD 7.1
+      uses: cross-platform-actions/action@v0.6.2
+      with:
+        operating_system: openbsd
+        version: '7.1'
+        shell: bash
+        run: |
+          uname -a
+          whoami
+          pwd
+          # http://ftp.openbsd.org/pub/OpenBSD/7.1/packages/amd64/
+          sudo pkg_add gcc-11.2.0p2 automake-1.16.3 autoconf-2.71 autoconf-archive libtool pkgconf
+          export AUTOCONF_VERSION=2.71
+          export AUTOMAKE_VERSION=1.16
+          ./autogen.sh --enable-examples-build && make -j4
+          

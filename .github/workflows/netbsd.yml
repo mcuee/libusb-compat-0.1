@@ -1,0 +1,32 @@
+name: "NetBSD build"
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on: [push, pull_request]
+# A workflow run is made up of one or more jobs that can run
+# sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Repository checkout
+      uses: actions/checkout@v2
+
+    - name: Test on NetBSD 9.2
+      uses: cross-platform-actions/action@v0.6.2
+      with:
+        operating_system: netbsd
+        version: '9.2'
+        shell: bash
+        run: |
+          uname -a
+          whoami
+          pwd
+          export PKG_REPOS="http://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/$(uname -p)/9.0_current/All/"
+          sudo -E pkgin clean
+          sudo -E pkgin update
+          # https://ftp.netbsd.org/pub/pkgsrc/current/pkgsrc/index-all.html
+          sudo -E pkgin -y install gcc10 automake autoconf autoconf-archive libtool pkgconf libusb1
+          ./autogen.sh --enable-examples-build && make -j4

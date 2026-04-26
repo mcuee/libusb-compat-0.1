@@ -612,6 +612,7 @@ static int initialize_device(struct usb_device *dev)
 static void free_device(struct usb_device *dev)
 {
 	clear_device(dev);
+	free(dev->config);
 	libusb_unref_device(dev->dev);
 	free(dev);
 }

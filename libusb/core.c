@@ -282,6 +282,7 @@ static int find_busses(struct usb_bus **ret)
 	return 0;
 
 err:
+	libusb_free_device_list(dev_list, 1);
 	bus = busses;
 	while (bus) {
 		struct usb_bus *tbus = bus->next;
@@ -679,10 +680,12 @@ API_EXPORTED int usb_find_devices(void)
 		dev = new_devices;
 		while (dev) {
 			struct usb_device *tdev = dev->next;
-			r = initialize_device(dev);	
+			r = initialize_device(dev);
 			if (r < 0) {
 				usbi_err("couldn't initialize device %d.%d (error %d)",
 					dev->bus->location, dev->devnum, r);
+				LIST_DEL(new_devices, dev);
+				free(dev);
 				dev = tdev;
 				continue;
 			}

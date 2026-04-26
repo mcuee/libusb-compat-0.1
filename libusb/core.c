@@ -81,8 +81,29 @@ static void __attribute__ ((constructor)) _usb_init (void)
 }
 #endif
 
+static void free_device(struct usb_device *dev);
+
+static void free_bus(struct usb_bus *bus)
+{
+	struct usb_device *dev = bus->devices;
+	while (dev) {
+		struct usb_device *tdev = dev->next;
+		free_device(dev);
+		dev = tdev;
+	}
+	free(bus);
+}
+
 static void __attribute__ ((destructor)) _usb_exit (void)
 {
+	struct usb_bus *bus = usb_busses;
+	while (bus) {
+		struct usb_bus *tbus = bus->next;
+		free_bus(bus);
+		bus = tbus;
+	}
+	usb_busses = NULL;
+
 	if (ctx) {
 		libusb_exit (ctx);
 		ctx = NULL;
@@ -317,7 +338,7 @@ API_EXPORTED int usb_find_busses(void)
 			usbi_dbg("bus %d removed", bus->location);
 			changes++;
 			LIST_DEL(usb_busses, bus);
-			free(bus);
+			free_bus(bus);
 		}
 
 		bus = tbus;

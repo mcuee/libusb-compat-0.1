@@ -21,11 +21,11 @@ AC_DEFUN([AU_CHECK_LIB_SONAME], [
           AU_CHECK_LIB_SONAME_LIBS="$LIBS"
           LIBS="$LIBS $7 -l$2"
           shrext_regexp=`echo "$shrext_cmds" | sed 's/\./\\\\./'`
-          AC_TRY_LINK([
+          AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 void libusb_close(void *);
-], [
+]], [[
 libusb_close((void*)0);
-],
+]])],
               [AS_VAR_SET([ac_Lib_SONAME], [`objdump -p conftest$ac_exeext | sed -n 's/@<:@ \t@:>@\+NEEDED@<:@ \t@:>@\+\('lib[$2]$shrext_regexp'.*\)$/\1/p'`])])
           LIBS="$AU_CHECK_LIB_SONAME_LIBS"
           AS_IF([test x"$ac_Lib_SONAME" = x ],

@@ -29,5 +29,6 @@ compile
 depcomp
 examples/lsusb
 examples/testlibusb
+examples/hotplug_monitor
 config.h.in
 libtool

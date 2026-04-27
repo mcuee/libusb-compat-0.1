@@ -1,0 +1,59 @@
+libusb-compat-0.1 examples
+==========================
+
+Small programs that exercise the libusb-0.1 compatibility shim. They are
+built automatically by `make` but are not installed.
+
+lsusb
+-----
+Prints `idVendor:idProduct` for every USB device. The smallest possible
+demonstration of the libusb-0.1 enumeration API.
+
+testlibusb [-v]
+---------------
+Walks every bus and device, opens each one, and prints descriptors.
+With `-v`, also prints each device's full configuration tree.
+
+hotplug_monitor [poll-ms]
+-------------------------
+Polls usb_find_busses() and usb_find_devices() in a loop and prints the
+current bus/device tree whenever either reports a change. Useful for
+exercising the bus-removal path in usb_find_busses() and for verifying
+that exit produces no "device X.Y still referenced" warnings from the
+underlying libusb (issue #25).
+
+Default polling interval is 500 ms; pass an integer argv[1] in
+milliseconds to override. Exit with Ctrl-C; the destructor runs and
+frees all retained device references.
+
+Triggering hot-plug events
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* Device add/remove: plug or unplug any USB device.
+
+* Bus add/remove (Linux, requires root): unbind and rebind the USB
+  host controller PCI device. This is the only way to make a whole
+  bus disappear from libusb's perspective on most systems.
+
+      lspci -D | grep USB
+      # pick the BDF of the controller you want to drop, e.g.
+      echo 0000:00:14.0 | sudo tee /sys/bus/pci/drivers/xhci_hcd/unbind
+      echo 0000:00:14.0 | sudo tee /sys/bus/pci/drivers/xhci_hcd/bind
+
+  Replace `xhci_hcd` with `ehci-pci`, `ohci-pci`, or `uhci_hcd` as
+  appropriate. Unbinding the controller you booted from will make
+  attached input devices stop working until you rebind it; consider
+  picking a controller that is not in use.
+
+Verifying reference accounting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Run with the libusb-1.0 debug level cranked up and watch the exit
+output:
+
+      LIBUSB_DEBUG=4 ./hotplug_monitor
+
+After Ctrl-C there should be no `device X.Y still referenced` warnings
+from `libusb_exit`. For an exhaustive memory check, run under valgrind:
+
+      LIBUSB_DEBUG=4 valgrind --leak-check=full ./hotplug_monitor

@@ -81,8 +81,29 @@ static void __attribute__ ((constructor)) _usb_init (void)
 }
 #endif
 
+static void free_device(struct usb_device *dev);
+
+static void free_bus(struct usb_bus *bus)
+{
+	struct usb_device *dev = bus->devices;
+	while (dev) {
+		struct usb_device *tdev = dev->next;
+		free_device(dev);
+		dev = tdev;
+	}
+	free(bus);
+}
+
 static void __attribute__ ((destructor)) _usb_exit (void)
 {
+	struct usb_bus *bus = usb_busses;
+	while (bus) {
+		struct usb_bus *tbus = bus->next;
+		free_bus(bus);
+		bus = tbus;
+	}
+	usb_busses = NULL;
+
 	if (ctx) {
 		libusb_exit (ctx);
 		ctx = NULL;
@@ -261,6 +282,7 @@ static int find_busses(struct usb_bus **ret)
 	return 0;
 
 err:
+	libusb_free_device_list(dev_list, 1);
 	bus = busses;
 	while (bus) {
 		struct usb_bus *tbus = bus->next;
@@ -317,7 +339,7 @@ API_EXPORTED int usb_find_busses(void)
 			usbi_dbg("bus %d removed", bus->location);
 			changes++;
 			LIST_DEL(usb_busses, bus);
-			free(bus);
+			free_bus(bus);
 		}
 
 		bus = tbus;
@@ -591,6 +613,7 @@ static int initialize_device(struct usb_device *dev)
 static void free_device(struct usb_device *dev)
 {
 	clear_device(dev);
+	free(dev->config);
 	libusb_unref_device(dev->dev);
 	free(dev);
 }
@@ -657,10 +680,12 @@ API_EXPORTED int usb_find_devices(void)
 		dev = new_devices;
 		while (dev) {
 			struct usb_device *tdev = dev->next;
-			r = initialize_device(dev);	
+			r = initialize_device(dev);
 			if (r < 0) {
 				usbi_err("couldn't initialize device %d.%d (error %d)",
 					dev->bus->location, dev->devnum, r);
+				LIST_DEL(new_devices, dev);
+				free(dev);
 				dev = tdev;
 				continue;
 			}

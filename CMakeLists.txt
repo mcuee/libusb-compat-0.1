@@ -64,8 +64,8 @@ elseif(MSVC)
     # 2. /wd4244 to silence ssize_t to int conversion noise
     target_compile_options(usb PRIVATE "/W3" "/wd4244")
     
-    # We define BUILDING_LIBUSB_COMPAT strictly for our build target 
-    # to control export vs import behaviors seamlessly.
+    # We define BUILDING_LIBUSB_COMPAT strictly for our shared library target 
+    # to drive the header file export/import rules perfectly.
     target_compile_definitions(usb PRIVATE 
         _CRT_SECURE_NO_WARNINGS=1 
         BUILDING_LIBUSB_COMPAT=1

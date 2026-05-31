@@ -25,6 +25,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <libusb.h>
 
@@ -44,6 +45,10 @@
 #define ENODATA EIO
 #endif
 
+#ifndef EOVERFLOW
+#define EOVERFLOW E2BIG
+#endif
+
 static libusb_context *ctx = NULL;
 static int usb_debug = 0;
 
@@ -54,25 +59,27 @@ enum usbi_log_level {
 	LOG_LEVEL_ERROR,
 };
 
+/* Realigned to C99 __VA_ARGS__ standard for MSVC /Zc:preprocessor parser compatibility */
 #ifdef ENABLE_LOGGING
-#define _usbi_log(level, fmt...) usbi_log(level, __FUNCTION__, fmt)
+#define _usbi_log(level, ...) usbi_log(level, __FUNCTION__, __VA_ARGS__)
 #else
-#define _usbi_log(level, fmt...)
+#define _usbi_log(level, ...)
 #endif
 
 #ifdef ENABLE_DEBUG_LOGGING
-#define usbi_dbg(fmt...) _usbi_log(LOG_LEVEL_DEBUG, fmt)
+#define usbi_dbg(...) _usbi_log(LOG_LEVEL_DEBUG, __VA_ARGS__)
 #else
-#define usbi_dbg(fmt...)
+#define usbi_dbg(...)
 #endif
 
-#define usbi_info(fmt...) _usbi_log(LOG_LEVEL_INFO, fmt)
-#define usbi_warn(fmt...) _usbi_log(LOG_LEVEL_WARNING, fmt)
-#define usbi_err(fmt...) _usbi_log(LOG_LEVEL_ERROR, fmt)
+#define usbi_info(...) _usbi_log(LOG_LEVEL_INFO, __VA_ARGS__)
+#define usbi_warn(...) _usbi_log(LOG_LEVEL_WARNING, __VA_ARGS__)
+#define usbi_err(...) _usbi_log(LOG_LEVEL_ERROR, __VA_ARGS__)
 
 API_EXPORTED struct usb_bus *usb_busses = NULL;
 
-#define compat_err(e) -(errno=libusb_to_errno(e))
+/* Safe evaluation comma expression across variant platform rvalues */
+#define compat_err(e) ((errno = libusb_to_errno(e)), -errno)
 
 #ifdef LIBUSB_1_0_SONAME
 static void __attribute__ ((constructor)) _usb_init (void)
@@ -94,7 +101,7 @@ static void free_bus(struct usb_bus *bus)
 	free(bus);
 }
 
-static void __attribute__ ((destructor)) _usb_exit (void)
+static void _usb_exit (void)
 {
 	struct usb_bus *bus = usb_busses;
 	while (bus) {
@@ -112,6 +119,19 @@ static void __attribute__ ((destructor)) _usb_exit (void)
 	libusb_dl_exit ();
 #endif
 }
+
+/* GNU destructor emulation block targeting native MSVC runtime execution layout */
+#if defined(__GNUC__) || defined(__clang__)
+static void __attribute__ ((destructor)) _usb_exit_gnu(void) {
+    _usb_exit();
+}
+#elif defined(_MSC_VER)
+#pragma section(".CRT$XCU", read)
+static void __cdecl _usb_exit_msvc(void) {
+    _usb_exit();
+}
+__declspec(allocate(".CRT$XCU")) void (__cdecl * _usb_exit_init)(void) = _usb_exit_msvc;
+#endif
 
 static int libusb_to_errno(int result)
 {
@@ -273,7 +293,7 @@ static int find_busses(struct usb_bus **ret)
 
 		memset(bus, 0, sizeof(*bus));
 		bus->location = bus_num;
-		sprintf(bus->dirname, "%03d", bus_num);
+		snprintf(bus->dirname, sizeof(bus->dirname), "%03d", bus_num);
 		LIST_ADD(busses, bus);
 	}
 
@@ -383,7 +403,7 @@ static int find_devices(libusb_device **dev_list, int dev_list_len,
 
 		dev->bus = bus;
 		dev->devnum = libusb_get_device_address(newlib_dev);
-		sprintf(dev->filename, "%03d", dev->devnum);
+		snprintf(dev->filename, sizeof(dev->filename), "%03d", dev->devnum);
 		LIST_ADD(devices, dev);
 	}
 

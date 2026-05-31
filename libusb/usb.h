@@ -35,8 +35,15 @@
 #include <stdint.h>
 #include <limits.h>
 
-#ifdef interface
-#undef interface
+/* Fix missing PATH_MAX definition on Windows/MSVC platforms */
+#if !defined(PATH_MAX)
+  #if defined(_MAX_PATH)
+    #define PATH_MAX _MAX_PATH
+  #elif defined(MAX_PATH)
+    #define PATH_MAX MAX_PATH
+  #else
+    #define PATH_MAX 4096
+  #endif
 #endif
 
 #ifdef interface

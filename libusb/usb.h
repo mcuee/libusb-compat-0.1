@@ -26,12 +26,18 @@
 #ifndef USB_H
 #define USB_H
 
+#ifndef _MSC_VER
 #include <unistd.h>
+#include <dirent.h>
+#endif
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <limits.h>
 
-#include <dirent.h>
+#ifdef interface
+#undef interface
+#endif
 
 #ifdef interface
 #undef interface

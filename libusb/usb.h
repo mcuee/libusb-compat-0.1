@@ -46,21 +46,18 @@
   #endif
 #endif
 
-/* Ensure clean cross-platform macro isolation */
-#ifdef API_EXPORTED
-  #undef API_EXPORTED
-#endif
-
-/* Dynamic linkage resolution rules for MSVC cross-compilation */
-#if defined(_MSC_VER)
+#if defined(_WIN32) || defined(__CYGWIN__)
   #if defined(BUILDING_LIBUSB_COMPAT)
     #define API_EXPORTED __declspec(dllexport)
   #else
     #define API_EXPORTED __declspec(dllimport)
   #endif
 #else
-  /* Keeps Autotools / GCC / Clang visibility defaults untouched */
-  #define API_EXPORTED __attribute__((visibility("default")))
+  #if defined(__GNUC__) && (__GNUC__ >= 4)
+    #define API_EXPORTED __attribute__((visibility("default")))
+  #else
+    #define API_EXPORTED
+  #endif
 #endif
 
 #ifdef interface

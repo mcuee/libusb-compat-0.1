@@ -60,8 +60,16 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
     target_compile_options(usb PRIVATE "-Wall" "-Wextra")
 
 elseif(MSVC)
-    target_compile_options(usb PRIVATE "/W3")
-    target_compile_definitions(usb PRIVATE _CRT_SECURE_NO_WARNINGS=1 API_EXPORTED=)
+    # 1. /W3 for standard warning levels
+    # 2. /wd4244 to silence ssize_t to int conversion noise
+    target_compile_options(usb PRIVATE "/W3" "/wd4244")
+    
+    # Define _CRT_SECURE_NO_WARNINGS to silence sprintf/strerror deprecation warnings.
+    # API_EXPORTED is left empty for standard MSVC compilation layouts.
+    target_compile_definitions(usb PRIVATE 
+        _CRT_SECURE_NO_WARNINGS=1 
+        API_EXPORTED=
+    )
 else()
     target_compile_definitions(usb PRIVATE API_EXPORTED=)
 endif()

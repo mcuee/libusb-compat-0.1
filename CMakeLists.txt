@@ -64,11 +64,11 @@ elseif(MSVC)
     # 2. /wd4244 to silence ssize_t to int conversion noise
     target_compile_options(usb PRIVATE "/W3" "/wd4244")
     
-    # Define _CRT_SECURE_NO_WARNINGS to silence sprintf/strerror deprecation warnings.
-    # On Windows/MSVC, we MUST explicitly export public symbols to generate a .lib file.
+    # We define BUILDING_LIBUSB_COMPAT strictly for our build target 
+    # to control export vs import behaviors seamlessly.
     target_compile_definitions(usb PRIVATE 
         _CRT_SECURE_NO_WARNINGS=1 
-        "API_EXPORTED=__declspec(dllexport)"
+        BUILDING_LIBUSB_COMPAT=1
     )
 else()
     target_compile_definitions(usb PRIVATE API_EXPORTED=)

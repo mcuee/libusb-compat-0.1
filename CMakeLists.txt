@@ -70,8 +70,6 @@ elseif(MSVC)
         _CRT_SECURE_NO_WARNINGS=1 
         BUILDING_LIBUSB_COMPAT=1
     )
-else()
-    target_compile_definitions(usb PRIVATE API_EXPORTED=)
 endif()
 
 if(WIN32)

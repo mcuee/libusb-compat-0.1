@@ -44,13 +44,21 @@ target_include_directories(usb
 )
 
 # Symbol Visibility and Warning Muting Realignment
-if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
+if(MSVC)
+    # 1. /W3 for standard warning levels
+    # 2. /wd4244 to silence ssize_t to int conversion noise
+    target_compile_options(usb PRIVATE "/W3" "/wd4244")
+    
+    # Mirroring the upstream configuration layer cleanly
+    target_compile_definitions(usb PRIVATE 
+        _CRT_SECURE_NO_WARNINGS=1 
+        BUILDING_LIBUSB_COMPAT=1
+    )
+else()
+    # Clang / GNU visibility controls
     check_c_compiler_flag("-fvisibility=hidden" HAVE_VISIBILITY)
     if(HAVE_VISIBILITY)
         target_compile_options(usb PRIVATE "-fvisibility=hidden")
-        target_compile_definitions(usb PRIVATE "API_EXPORTED=__attribute__((visibility(\"default\")))")
-    else()
-        target_compile_definitions(usb PRIVATE API_EXPORTED=)
     endif()
     
     check_c_compiler_flag("-Wno-pointer-sign" HAVE_NO_POINTER_SIGN)
@@ -58,18 +66,6 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
         target_compile_options(usb PRIVATE "-Wno-pointer-sign")
     endif()
     target_compile_options(usb PRIVATE "-Wall" "-Wextra")
-
-elseif(MSVC)
-    # 1. /W3 for standard warning levels
-    # 2. /wd4244 to silence ssize_t to int conversion noise
-    target_compile_options(usb PRIVATE "/W3" "/wd4244")
-    
-    # We define BUILDING_LIBUSB_COMPAT strictly for our shared library target 
-    # to drive the header file export/import rules perfectly.
-    target_compile_definitions(usb PRIVATE 
-        _CRT_SECURE_NO_WARNINGS=1 
-        BUILDING_LIBUSB_COMPAT=1
-    )
 endif()
 
 if(WIN32)

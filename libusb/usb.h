@@ -46,6 +46,20 @@
   #endif
 #endif
 
+/* Dynamic linkage resolution rules for MSVC */
+#if defined(_MSC_VER)
+  #if defined(BUILDING_LIBUSB_COMPAT)
+    #define API_EXPORTED __declspec(dllexport)
+  #else
+    #define API_EXPORTED __declspec(dllimport)
+  #endif
+#else
+  /* Keeps Autotools/GCC/Clang visibility defaults untouched if not predefined */
+  #ifndef API_EXPORTED
+    #define API_EXPORTED
+  #endif
+#endif
+
 #ifdef interface
 #undef interface
 #endif

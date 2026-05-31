@@ -65,10 +65,10 @@ elseif(MSVC)
     target_compile_options(usb PRIVATE "/W3" "/wd4244")
     
     # Define _CRT_SECURE_NO_WARNINGS to silence sprintf/strerror deprecation warnings.
-    # API_EXPORTED is left empty for standard MSVC compilation layouts.
+    # On Windows/MSVC, we MUST explicitly export public symbols to generate a .lib file.
     target_compile_definitions(usb PRIVATE 
         _CRT_SECURE_NO_WARNINGS=1 
-        API_EXPORTED=
+        "API_EXPORTED=__declspec(dllexport)"
     )
 else()
     target_compile_definitions(usb PRIVATE API_EXPORTED=)

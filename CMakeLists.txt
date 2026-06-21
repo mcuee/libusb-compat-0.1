@@ -23,9 +23,17 @@ include(CheckCCompilerFlag)
 option(BUILD_SHARED_LIBS "Build shared libraries for libusb-compat" ON)
 option(ENABLE_EXAMPLES "Build example applications" ON)
 
-# Find libusb-1.0
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(LIBUSB1 REQUIRED IMPORTED_TARGET libusb-1.0>=1.0.0)
+# --- Find libusb-1.0 (vcpkg CONFIG lookup fallback to PkgConfig) ---
+find_package(libusb-1.0 CONFIG QUIET)
+if(TARGET libusb::libusb-1.0)
+    set(LIBUSB1_TARGET libusb::libusb-1.0)
+    message(STATUS "Found libusb-1.0 via CMake config target")
+else()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(LIBUSB1 REQUIRED IMPORTED_TARGET libusb-1.0>=1.0.0)
+    set(LIBUSB1_TARGET PkgConfig::LIBUSB1)
+    message(STATUS "Found libusb-1.0 via PkgConfig")
+endif()
 
 # --- Generated config directory ---
 set(GENERATED_CONFIG_DIR "${CMAKE_CURRENT_BINARY_DIR}/compat_config")
@@ -74,15 +82,28 @@ set(LIBUSB_COMPAT_SOURCES
 )
 
 add_library(usb ${LIBUSB_COMPAT_SOURCES})
+target_link_libraries(usb PRIVATE ${LIBUSB1_TARGET})
 
-# Critical: API_EXPORTED handling for Windows/MinGW
+# Critical: API_EXPORTED handling for Windows/MinGW/Linux
 if(WIN32)
     target_compile_definitions(usb PRIVATE
-        API_EXPORTED=__declspec(dllexport)
         BUILDING_LIBUSB_COMPAT=1
         _CRT_SECURE_NO_WARNINGS=1
         _WIN32_WINNT=0x0600
     )
+    
+    # Check if we are building a Shared or Static library layout on Windows
+    if(BUILD_SHARED_LIBS)
+        target_compile_definitions(usb PRIVATE API_EXPORTED=__declspec(dllexport))
+        
+        # Force MSVC to export symbols to generate the missing target '.lib' anchor file
+        if(MSVC)
+            set_target_properties(usb PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+        endif()
+    else()
+        target_compile_definitions(usb PRIVATE API_EXPORTED=) # Empty token representation for static linkage passes
+    endif()
+
     if(MSVC)
         set_target_properties(usb PROPERTIES PREFIX "lib")
     endif()
@@ -91,8 +112,6 @@ else()
         API_EXPORTED=__attribute__((visibility("default")))
     )
 endif()
-
-target_link_libraries(usb PRIVATE PkgConfig::LIBUSB1)
 
 if(WIN32)
     target_link_libraries(usb PRIVATE kernel32 user32)
@@ -138,7 +157,8 @@ install(TARGETS usb
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-install(FILES libusb/usb.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libusb)
+# Restored legacy destination path root target directory pathing for direct '#include <usb.h>' consumer support maps
+install(FILES libusb/usb.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # pkg-config file
 set(prefix ${CMAKE_INSTALL_PREFIX})
